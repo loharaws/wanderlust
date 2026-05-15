@@ -4,9 +4,17 @@ services:
   mongo:
     container_name: mongodb
     image: mongo
+    volumes:
+      - ./backend/data:/data
     ports:
       - "27017:27017"
-    
+    command: >
+      sh -c "
+      mongod --bind_ip_all &
+      sleep 10 &&
+      mongoimport --db wanderlust --collection posts --file /data/sample_posts.json --jsonArray &&
+      wait
+      "
 
   backend:
     container_name: backend
@@ -15,6 +23,8 @@ services:
       - ./backend/.env.sample
     ports:
       - "5000:5000"
+    depends_on:
+      - mongo
 
 
   frontend:
