@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: frontend-container
-          image: wan-frontend:latest
+          image: wan-frontend
           imagePullPolicy: Always
 
           ports:
@@ -75,7 +75,7 @@ spec:
     spec:
       containers:
         - name: backend-container
-          image: wan-backend:latest
+          image: wan-backend
           imagePullPolicy: Always
 
           ports:
