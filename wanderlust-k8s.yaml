@@ -1,110 +1,4 @@
 # =========================================
-# Frontend Deployment
-# =========================================
-apiVersion: apps/v1
-kind: Deployment
-
-metadata:
-  name: frontend-deployment
-
-spec:
-  replicas: 1
-
-  selector:
-    matchLabels:
-      app: frontend
-
-  template:
-    metadata:
-      labels:
-        app: frontend
-
-    spec:
-      containers:
-        - name: frontend-container
-          image: wan-frontend:latest
-          imagePullPolicy: Always
-
-          ports:
-            - containerPort: 5173
-
----
-# =========================================
-# Frontend Service
-# =========================================
-apiVersion: v1
-kind: Service
-
-metadata:
-  name: frontend-service
-
-spec:
-  selector:
-    app: frontend
-
-  ports:
-    - protocol: TCP
-      port: 5173
-      targetPort: 5173
-      nodePort: 30173
-
-  type: NodePort
-
----
-# =========================================
-# Backend Deployment
-# =========================================
-apiVersion: apps/v1
-kind: Deployment
-
-metadata:
-  name: backend-deployment
-
-spec:
-  replicas: 1
-
-  selector:
-    matchLabels:
-      app: backend
-
-  template:
-    metadata:
-      labels:
-        app: backend
-
-    spec:
-      containers:
-        - name: backend-container
-          image: wan-backend:latest
-          imagePullPolicy: Always
-
-          ports:
-            - containerPort: 5000
-
----
-# =========================================
-# Backend Service
-# =========================================
-apiVersion: v1
-kind: Service
-
-metadata:
-  name: backend-service
-
-spec:
-  selector:
-    app: backend
-
-  ports:
-    - protocol: TCP
-      port: 5000
-      targetPort: 5000
-      nodePort: 30050
-
-  type: NodePort
-
----
-# =========================================
 # MongoDB Deployment
 # =========================================
 apiVersion: apps/v1
@@ -129,6 +23,7 @@ spec:
       containers:
         - name: mongodb-container
           image: mongo:latest
+          imagePullPolicy: Always
 
           ports:
             - containerPort: 27017
@@ -140,8 +35,17 @@ spec:
           args:
             - |
               mongod --bind_ip_all &
-              sleep 10 &&
-              mongoimport --db wanderlust --collection posts --file /data/sample_posts.json --jsonArray &&
+
+              echo "Waiting for MongoDB to start..."
+              sleep 15
+
+              echo "Importing sample data..."
+              mongoimport \
+                --db wanderlust \
+                --collection posts \
+                --file /data/sample_posts.json \
+                --jsonArray
+
               wait
 
           volumeMounts:
@@ -178,6 +82,121 @@ spec:
     - protocol: TCP
       port: 27017
       targetPort: 27017
-      nodePort: 30017
+
+  type: ClusterIP
+
+---
+# =========================================
+# Backend Deployment
+# Backend depends on MongoDB
+# =========================================
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: backend-deployment
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+
+    spec:
+      containers:
+        - name: backend-container
+          image: wan-backend:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 5000
+
+          env:
+            - name: MONGO_URI
+              value: mongodb://mongodb-service:27017/wanderlust
+
+---
+# =========================================
+# Backend Service
+# =========================================
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: backend-service
+
+spec:
+  selector:
+    app: backend
+
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+      nodePort: 30050
+
+  type: NodePort
+
+---
+# =========================================
+# Frontend Deployment
+# Frontend depends on Backend
+# =========================================
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: frontend-deployment
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+
+    spec:
+      containers:
+        - name: frontend-container
+          image: wan-frontend:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 5173
+
+          env:
+            - name: VITE_API_URL
+              value: http://<HOST-IP>:30050
+
+---
+# =========================================
+# Frontend Service
+# =========================================
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: frontend-service
+
+spec:
+  selector:
+    app: frontend
+
+  ports:
+    - protocol: TCP
+      port: 5173
+      targetPort: 5173
+      nodePort: 30173
 
   type: NodePort
