@@ -20,9 +20,23 @@ spec:
         app: frontend
 
     spec:
+      initContainers:
+        - name: wait-for-backend
+          image: busybox
+
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z backend-service 5000;
+              do
+                echo "Waiting for backend...";
+                sleep 5;
+              done;
+
       containers:
         - name: frontend-container
-          image: wan-frontend:latest
+          image: yashwantlohar/wan-frontend:latest
           imagePullPolicy: Always
 
           ports:
@@ -73,13 +87,31 @@ spec:
         app: backend
 
     spec:
+      initContainers:
+        - name: wait-for-mongodb
+          image: busybox
+
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z mongodb-service 27017;
+              do
+                echo "Waiting for MongoDB...";
+                sleep 5;
+              done;
+
       containers:
         - name: backend-container
-          image: wan-backend:latest
+          image: yashwantlohar/wan-backend:latest
           imagePullPolicy: Always
 
           ports:
             - containerPort: 5000
+
+          env:
+            - name: MONGO_URI
+              value: mongodb://mongodb-service:27017/wanderlust
 
 ---
 # =========================================
@@ -139,10 +171,10 @@ spec:
 
           args:
             - |
-              mongod --bind_ip_all &
-              sleep 10 &&
+              mongod --bind_ip_all --fork --logpath /var/log/mongodb.log &&
+              sleep 15 &&
               mongoimport --db wanderlust --collection posts --file /data/sample_posts.json --jsonArray &&
-              wait
+              mongod --bind_ip_all
 
           volumeMounts:
             - name: mongodb-data
