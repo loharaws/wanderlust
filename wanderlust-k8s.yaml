@@ -139,6 +139,9 @@ spec:
 # =========================================
 # MongoDB Deployment
 # =========================================
+# =========================================
+# MongoDB Deployment
+# =========================================
 apiVersion: apps/v1
 kind: Deployment
 
@@ -165,32 +168,13 @@ spec:
           ports:
             - containerPort: 27017
 
-          command:
-            - /bin/bash
-            - -c
-
-          args:
-            - |
-              mongod --bind_ip_all --fork --logpath /var/log/mongodb.log &&
-              sleep 15 &&
-              mongoimport --db wanderlust --collection posts --file /data/sample_posts.json --jsonArray &&
-              mongod --bind_ip_all
-
           volumeMounts:
-            - name: mongodb-data
+            - name: mongodb-storage
               mountPath: /data/db
 
-            - name: mongo-sample-data
-              mountPath: /data
-
       volumes:
-        - name: mongodb-data
+        - name: mongodb-storage
           emptyDir: {}
-
-        - name: mongo-sample-data
-          hostPath:
-            path: /data
-            type: DirectoryOrCreate
 
 ---
 # =========================================
