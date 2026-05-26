@@ -1,0 +1,183 @@
+# =========================================
+# Frontend Deployment
+# =========================================
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: frontend-deployment
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+
+    spec:
+      containers:
+        - name: frontend-container
+          image: wan-frontend:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 5173
+
+---
+# =========================================
+# Frontend Service
+# =========================================
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: frontend-service
+
+spec:
+  selector:
+    app: frontend
+
+  ports:
+    - protocol: TCP
+      port: 5173
+      targetPort: 5173
+      nodePort: 30173
+
+  type: NodePort
+
+---
+# =========================================
+# Backend Deployment
+# =========================================
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: backend-deployment
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+
+    spec:
+      containers:
+        - name: backend-container
+          image: wan-backend:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 5000
+
+---
+# =========================================
+# Backend Service
+# =========================================
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: backend-service
+
+spec:
+  selector:
+    app: backend
+
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+      nodePort: 30050
+
+  type: NodePort
+
+---
+# =========================================
+# MongoDB Deployment
+# =========================================
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: mongodb-deployment
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: mongodb
+
+  template:
+    metadata:
+      labels:
+        app: mongodb
+
+    spec:
+      containers:
+        - name: mongodb-container
+          image: mongo:latest
+
+          ports:
+            - containerPort: 27017
+
+          command:
+            - /bin/bash
+            - -c
+
+          args:
+            - |
+              mongod --bind_ip_all &
+              sleep 10 &&
+              mongoimport --db wanderlust --collection posts --file /data/sample_posts.json --jsonArray &&
+              wait
+
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+
+            - name: mongo-sample-data
+              mountPath: /data
+
+      volumes:
+        - name: mongodb-data
+          emptyDir: {}
+
+        - name: mongo-sample-data
+          hostPath:
+            path: /data
+            type: DirectoryOrCreate
+
+---
+# =========================================
+# MongoDB Service
+# =========================================
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: mongodb-service
+
+spec:
+  selector:
+    app: mongodb
+
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+      nodePort: 30017
+
+  type: NodePort
