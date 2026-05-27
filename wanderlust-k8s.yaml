@@ -175,7 +175,7 @@ spec:
                 echo "Waiting for Backend..."
                 sleep 5
               done
-              npm run dev
+              npm start
 
 ---
 apiVersion: v1
