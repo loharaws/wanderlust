@@ -1,7 +1,15 @@
-FROM node:21
+FROM node:18
+
 WORKDIR /app
-COPY . .
+
+COPY package*.json ./
+
 RUN npm install
+
+COPY . .
+
 COPY .env.sample .env.local
+
 EXPOSE 5173
-CMD ["npm" , "run" , "dev","--","--host"]
+
+CMD ["npm", "run", "dev"]
