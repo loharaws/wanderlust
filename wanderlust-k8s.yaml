@@ -159,7 +159,7 @@ spec:
           imagePullPolicy: Always
 
           ports:
-            - containerPort: 3000
+            - containerPort: 5173
 
           env:
             - name: REACT_APP_BACKEND_URL
@@ -190,8 +190,8 @@ spec:
 
   ports:
     - protocol: TCP
-      port: 3000
-      targetPort: 3000
+      port: 5173
+      targetPort: 5173
       nodePort: 30030
 
   type: NodePort
