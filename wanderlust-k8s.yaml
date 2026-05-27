@@ -94,7 +94,7 @@ spec:
     spec:
       containers:
         - name: backend-container
-          image: wan-backend:latest
+          image: yashwantlohar/wan-backend:latest
           imagePullPolicy: Always
 
           ports:
@@ -160,7 +160,7 @@ spec:
     spec:
       containers:
         - name: frontend-container
-          image: wan-frontend:latest
+          image: yashwantlohar/wan-frontend:latest
           imagePullPolicy: Always
 
           ports:
