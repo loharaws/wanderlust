@@ -155,7 +155,7 @@ spec:
     spec:
       containers:
         - name: frontend-container
-          image: yashwantlohar/wan-frontend:v2
+          image: yashwantlohar/wan-frontend:latest
           imagePullPolicy: Always
 
           ports:
