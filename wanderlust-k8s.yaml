@@ -1,82 +1,66 @@
 # =========================================
-# MongoDB Deployment
+# MongoDB Deployment + Service
 # =========================================
 apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: mongodb-deployment
+  name: mongo-deployment
 
 spec:
   replicas: 1
 
   selector:
     matchLabels:
-      app: mongodb
+      app: mongo
 
   template:
     metadata:
       labels:
-        app: mongodb
+        app: mongo
 
     spec:
       containers:
-        - name: mongodb-container
-          image: mongo:latest
-          imagePullPolicy: Always
-
+        - name: mongo-container
+          image: mongo:6.0
           ports:
             - containerPort: 27017
+
+          volumeMounts:
+            - name: mongo-storage
+              mountPath: /data/db
+
+            - name: mongo-seed
+              mountPath: /data
 
           command:
             - /bin/bash
             - -c
-
-          args:
             - |
               mongod --bind_ip_all &
-
-              echo "Waiting for MongoDB to start..."
-              sleep 15
-
-              echo "Importing sample data..."
-              mongoimport \
-                --db wanderlust \
-                --collection posts \
-                --file /data/sample_posts.json \
-                --jsonArray
-
+              sleep 10
+              mongoimport --db wanderlust --collection posts --file /data/sample_posts.json --jsonArray
               wait
 
-          volumeMounts:
-            - name: mongodb-data
-              mountPath: /data/db
-
-            - name: mongo-sample-data
-              mountPath: /data
-
       volumes:
-        - name: mongodb-data
+        - name: mongo-storage
           emptyDir: {}
 
-        - name: mongo-sample-data
+        - name: mongo-seed
           hostPath:
             path: /data
             type: DirectoryOrCreate
 
 ---
-# =========================================
-# MongoDB Service
-# =========================================
 apiVersion: v1
 kind: Service
 
 metadata:
-  name: mongodb-service
+  name: mongo-service
 
 spec:
   selector:
-    app: mongodb
+    app: mongo
 
   ports:
     - protocol: TCP
@@ -85,11 +69,10 @@ spec:
 
   type: ClusterIP
 
+# =========================================
+# Backend Deployment + Service
+# =========================================
 ---
-# =========================================
-# Backend Deployment
-# Backend depends on MongoDB
-# =========================================
 apiVersion: apps/v1
 kind: Deployment
 
@@ -118,13 +101,22 @@ spec:
             - containerPort: 5000
 
           env:
-            - name: MONGO_URI
-              value: mongodb://mongodb-service:27017/wanderlust
+            - name: MONGO_URL
+              value: mongodb://mongo-service:27017/wanderlust
+
+          # Backend waits for MongoDB
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until nc -z mongo-service 27017;
+              do
+                echo "Waiting for MongoDB..."
+                sleep 5
+              done
+              npm start
 
 ---
-# =========================================
-# Backend Service
-# =========================================
 apiVersion: v1
 kind: Service
 
@@ -143,11 +135,10 @@ spec:
 
   type: NodePort
 
+# =========================================
+# Frontend Deployment + Service
+# =========================================
 ---
-# =========================================
-# Frontend Deployment
-# Frontend depends on Backend
-# =========================================
 apiVersion: apps/v1
 kind: Deployment
 
@@ -173,16 +164,25 @@ spec:
           imagePullPolicy: Always
 
           ports:
-            - containerPort: 5173
+            - containerPort: 3000
 
           env:
-            - name: VITE_API_URL
-              value: http://<HOST-IP>:30050
+            - name: REACT_APP_BACKEND_URL
+              value: http://backend-service:5000
+
+          # Frontend waits for Backend
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until nc -z backend-service 5000;
+              do
+                echo "Waiting for Backend..."
+                sleep 5
+              done
+              npm start
 
 ---
-# =========================================
-# Frontend Service
-# =========================================
 apiVersion: v1
 kind: Service
 
@@ -195,8 +195,8 @@ spec:
 
   ports:
     - protocol: TCP
-      port: 5173
-      targetPort: 5173
-      nodePort: 30173
+      port: 3000
+      targetPort: 3000
+      nodePort: 30030
 
   type: NodePort
