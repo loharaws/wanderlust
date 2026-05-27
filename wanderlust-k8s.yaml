@@ -162,20 +162,13 @@ spec:
             - containerPort: 5173
 
           env:
-            - name: REACT_APP_BACKEND_URL
+            - name: VITE_API_PATH
               value: http://backend-service:5000
 
-          # Frontend waits for Backend
           command:
-            - /bin/sh
-            - -c
-            - |
-              until nc -z backend-service 5000;
-              do
-                echo "Waiting for Backend..."
-                sleep 5
-              done
-              npm start
+            - npm
+            - run
+            - dev
 
 ---
 apiVersion: v1
