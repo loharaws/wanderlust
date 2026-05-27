@@ -109,11 +109,6 @@ spec:
             - /bin/sh
             - -c
             - |
-              until nc -z mongo-service 27017;
-              do
-                echo "Waiting for MongoDB..."
-                sleep 5
-              done
               npm start
 
 ---
